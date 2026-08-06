@@ -1,0 +1,36 @@
+name: Spotify Daily Tracker
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # 매일 UTC 기준 자정 (한국 시간 오전 9시)에 자동 실행
+  workflow_dispatch: # 웹에서 버튼을 눌러 수동으로 즉시 실행할 수도 있게 설정
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 깃허브가 스스로 데이터 파일을 수정/저장할 수 있는 권한 부여
+    steps:
+      - name: 저장소 코드 가져오기
+        uses: actions/checkout@v4
+
+      - name: 파이썬 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: 필요 라이브러리 및 브라우저 설치
+        run: |
+          pip install pandas playwright
+          playwright install chromium
+
+      - name: 크롤링 스크립트 실행
+        run: python scraper.py
+
+      - name: 변경된 데이터 파일을 깃허브에 자동으로 저장(Commit)
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.io"
+          git add spotify_history.csv
+          git diff --staged --quiet || git commit -m "Auto-update Spotify stats: $(date +'%Y-%m-%d')"
+          git push
